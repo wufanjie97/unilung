@@ -16,7 +16,7 @@ The repository is organized as follows:
 
 - `lung_cancer_sp`: This folder contains scripts that cover all the code related to the spatial transcriptome analysis of lung cancer. Due to the store limitation, the original and some intermediate data files are not included in the repository.
 
-Please note that the data are not included in this repository due to their large size. They were uploaded to uniLUNG wedsite (https://zenodo.org/uploads/11195725).
+Please note that the data are not included in this repository due to their large size. They were uploaded to uniLUNG wedsite (https://lung.unifiedcellatlas.org/download/).
 
 ## Issues
 If you encounter any issues or have questions about the code or analysis, please open an issue on the GitHub repository. 
