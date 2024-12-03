@@ -1,5 +1,5 @@
 # uniLUNG Reproducibility
-This repository contains codes to reproduce the results published in the paper.
+This repository contains codes to reproduce the results published in the paper:
 
 "A universal single-cell transcriptomics atlas of human lung cells decodes multiple pulmonary diseases"
 
