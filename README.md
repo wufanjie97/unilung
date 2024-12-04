@@ -1,7 +1,7 @@
 # uniLUNG Reproducibility
 This repository contains codes to reproduce the results published in the paper:
 
-"A universal single-cell transcriptomics atlas of human lung cells decodes multiple pulmonary diseases"
+"A universal single-cell transcriptomics atlas of human lung decodes multiple pulmonary diseases"
 
 The web portal of uniLUNG together with all the datasets are publicly available at https://lung.unifiedcellatlas.org.
 
@@ -16,7 +16,7 @@ The repository is organized as follows:
 
 - `lung_cancer_sp`: This folder contains scripts that cover all the code related to the spatial transcriptome analysis of lung cancer. Due to the store limitation, the original and some intermediate data files are not included in the repository.
 
-Please note that the data are not included in this repository due to their large size. They were uploaded to uniLUNG wedsite (https://lung.unifiedcellatlas.org/download/).
+Please note that the data are not included in this repository due to their large size. They were uploaded to uniLUNG wedsite (https://lung.unifiedcellatlas.org/download/data_paper.tar.gz).
 
 ## Issues
 If you encounter any issues or have questions about the code or analysis, please open an issue on the GitHub repository. 
