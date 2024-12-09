@@ -43,7 +43,7 @@ myprocess <- function(adata){
   sce <- sce %>% 
     RunUMAP(reduction = "harmony", dims = 1:30) %>% 
     FindNeighbors(reduction = "harmony", dims = 1:30) %>% 
-    FindClusters(resolution = 0.01)
+    FindClusters(resolution = 0.05)
   
   svprocess <- paste0(adata,"_proc.rds")
   saveRDS(sce,file.path(dir,svprocess))
