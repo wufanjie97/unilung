@@ -24,7 +24,6 @@ def run_raw(in_h5ad, out_h5ad, out_umap, out_unintegrate, top_genes):
     sc.set_figure_params(dpi_save=300, frameon=False, figsize=(8, 10))
     adata = sc.read_h5ad(in_h5ad)
     adata.var_names_make_unique()
-    adata.layers["counts"] = adata.X.copy()
     sc.pp.highly_variable_genes(
         adata,
         flavor="seurat_v3",
