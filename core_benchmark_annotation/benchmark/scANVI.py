@@ -20,10 +20,8 @@ def run_scANVI(in_h5ad, out_h5ad, out_umap, out_scanvi, top_genes):
     sc.set_figure_params(dpi_save=300, frameon=False, figsize=(8, 10))
     adata = sc.read_h5ad(in_h5ad)
     adata.var_names_make_unique()
-    adata.layers["counts"] = adata.X.copy()
     sc.pp.highly_variable_genes(
         adata,
-        layer="counts",
         flavor="seurat_v3",
         n_top_genes=top_genes,
         min_mean=0.0125,
