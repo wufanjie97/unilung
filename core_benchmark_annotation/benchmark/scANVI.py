@@ -12,7 +12,7 @@ def run_scANVI(in_h5ad, out_h5ad, out_umap, out_scanvi, top_genes):
     :param in_h5ad: input adata
     :param out_h5ad: output adata
     :param out_umap: output umap.pdf
-    :param out_scvi: output embed.pdf
+    :param out_scanvi: output embed.pdf
     :param top_genes: number of HVGs
     :return:
     """
