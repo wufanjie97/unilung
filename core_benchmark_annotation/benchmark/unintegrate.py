@@ -28,7 +28,10 @@ def run_raw(in_h5ad, out_h5ad, out_umap, out_unintegrate, top_genes):
         adata,
         flavor="seurat_v3",
         n_top_genes=top_genes,
-        layer="counts",
+        min_mean=0.0125,
+        max_mean=3,
+        min_disp=0.5,
+        n_bins=20,
         batch_key='batch',
         subset=True
     )
