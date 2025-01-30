@@ -24,7 +24,7 @@ def run_simba(in_h5ad, out_h5ad, out_umap, out_simba, top_genes):
     adata.var_names_make_unique()
     adata_simba = adata.copy()
     print("Setup simba model")
-    workdir = '/public8/lilab/student/fjwu/btit1/inte_bench/models/result_simba'
+    workdir = 'inte_bench/models/result_simba'
     adata_simba = ov.single.pySIMBA(adata_simba, workdir)
     adata_simba.preprocess(batch_key='batch', min_n_cells=1, method='lib_size',
                            n_top_genes=top_genes, n_bins=5)
