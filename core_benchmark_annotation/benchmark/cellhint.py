@@ -13,7 +13,7 @@ def run_cellhint(in_h5ad, out_h5ad, out_umap, out_cellhint, top_genes):
     :param in_h5ad: input adata
     :param out_h5ad: output adata
     :param out_umap: output umap.pdf
-    :param out_scvi: output embed.pdf
+    :param out_cellhint: output embed.pdf
     :param top_genes: number of HVGs
     :return:
     """
