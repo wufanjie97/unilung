@@ -21,7 +21,7 @@ v4_obj <- readRDS(in_rds)
 
 # covert a v4 assay to a v5 assay
 seu_obj <- v4_obj
-seu_obj[["RNA"]]<-as(object=seu_obj[["RNA"]],Class="Assay5")
+seu_obj[["RNA"]] <- as(object=seu_obj[["RNA"]],Class="Assay5")
 
 # split 
 seu_obj[["RNA"]] <- split(seu_obj[["RNA"]], f = seu_obj$batch)
@@ -30,9 +30,10 @@ seu_obj <- NormalizeData(seu_obj, normalization.method = "LogNormalize")
 seu_obj <- FindVariableFeatures(seu_obj, selection.method = "vst", nfeatures = 2000)
 seu_obj <- ScaleData(seu_obj)
 seu_obj <- RunPCA(seu_obj, npcs = 50,verbose = F)
+saveRDS(seu_obj, "inte_bench/v5rpca_seuobj.rds")
 
 # rpca
-seu_obj<-readRDS("/public8/lilab/student/fjwu/btit1/inte_bench/v5rpca_seuobj.rds")
+seu_obj <- readRDS("inte_bench/v5rpca_seuobj.rds")
 seu_obj <- IntegrateLayers(
   object = seu_obj, method = RPCAIntegration, k.weight = 50,
   orig.reduction = "pca", new.reduction = "integrated.rpca",
@@ -46,7 +47,7 @@ saveRDS(seu_obj,file=file.path(outdir,'v5rpca.rds'))
 
 # covert a v5 assay to a v4 assay
 seu_obj2 <- seu_obj
-seu_obj2[["RNA"]]<-as(object=seu_obj2[["RNA"]],Class="Assay")
+seu_obj2[["RNA"]] <- as(object=seu_obj2[["RNA"]],Class="Assay")
 SaveH5Seurat(seu_obj2,
              filename = file.path(outdir,'v5rpca.h5seurat'),
              assay = "RNA",
