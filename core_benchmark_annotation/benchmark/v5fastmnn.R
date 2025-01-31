@@ -21,7 +21,7 @@ v4_obj <- readRDS(in_rds)
 
 # covert a v4 assay to a v5 assay
 seu_obj <- v4_obj
-seu_obj[["RNA"]]<-as(object=seu_obj[["RNA"]],Class="Assay5")
+seu_obj[["RNA"]] <- as(object=seu_obj[["RNA"]],Class="Assay5")
 
 # split 
 seu_obj[["RNA"]] <- split(seu_obj[["RNA"]], f = seu_obj$batch)
@@ -46,7 +46,7 @@ saveRDS(seu_obj,file=file.path(outdir,'v5fastmnn.rds'))
 
 # covert a v5 assay to a v4 assay
 seu_obj2 <- seu_obj
-seu_obj2[["RNA"]]<-as(object=seu_obj2[["RNA"]],Class="Assay")
+seu_obj2[["RNA"]] <- as(object=seu_obj2[["RNA"]],Class="Assay")
 SaveH5Seurat(seu_obj2,
              filename = file.path(outdir,'v5fastmnn.h5seurat'),
              assay = "mnn.reconstructed",
