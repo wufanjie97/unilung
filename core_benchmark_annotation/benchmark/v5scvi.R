@@ -21,7 +21,7 @@ v4_obj <- readRDS(in_rds)
 
 # covert a v4 assay to a v5 assay
 seu_obj <- v4_obj
-seu_obj[["RNA"]]<-as(object=seu_obj[["RNA"]],Class="Assay5")
+seu_obj[["RNA"]] <- as(object=seu_obj[["RNA"]],Class="Assay5")
 
 # split 
 seu_obj[["RNA"]] <- split(seu_obj[["RNA"]], f = seu_obj$batch)
@@ -35,7 +35,7 @@ seu_obj <- RunPCA(seu_obj, npcs = 50,verbose = F)
 seu_obj <- IntegrateLayers(
   object = seu_obj, method = scVIIntegration,
   new.reduction = "integrated.scvi",
-  conda_env = "/home/fjwu/miniconda2/envs/scvi",
+  conda_env = "miniconda2/envs/scvi",
   verbose = FALSE
 )
 seu_obj <- FindNeighbors(seu_obj, reduction = "integrated.scvi", dims = 1:50)
@@ -46,7 +46,7 @@ saveRDS(seu_obj,file=file.path(outdir,'v5scvi.rds'))
 
 # covert a v5 assay to a v4 assay
 seu_obj2 <- seu_obj
-seu_obj2[["RNA"]]<-as(object=seu_obj2[["RNA"]],Class="Assay")
+seu_obj2[["RNA"]] <- as(object=seu_obj2[["RNA"]],Class="Assay")
 SaveH5Seurat(seu_obj2,
              filename = file.path(outdir,'v5scvi.h5seurat'),
              assay = "mnn.reconstructed",
