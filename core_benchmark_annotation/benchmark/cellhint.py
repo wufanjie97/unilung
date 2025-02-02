@@ -36,12 +36,12 @@ def run_cellhint(in_h5ad, out_h5ad, out_umap, out_cellhint, top_genes):
     )
     sc.pp.scale(adata)
     sc.tl.pca(adata)
-    sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=15, n_pcs=50)
+    sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=30, n_pcs=50)
     sc.tl.umap(adata, min_dist=0.3)
     adata.obsm['X_umapraw'] = adata.obsm['X_umap']
     print("Cellhint")
     cellhint.integrate(adata, 'batch', 'map_celltype')
-    sc.pp.neighbors(adata, use_rep='X_pca', key_added='cellhint', n_neighbors=15)
+    sc.pp.neighbors(adata, use_rep='X_pca', key_added='cellhint', n_neighbors=30)
     sc.tl.umap(adata, neighbors_key='cellhint', min_dist=0.3)
     sc.pl.embedding(
         adata, basis="X_pca", color=['batch', 'map_ann_level1',  'map_ann_level2'],
@@ -100,7 +100,7 @@ def run_cellhint_harmonize(in_h5ad, out_h5ad, out_umap, out_cellhint, top_genes)
     )
     sc.pp.scale(adata)
     sc.tl.pca(adata)
-    sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=15, n_pcs=50)
+    sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=30, n_pcs=50)
     sc.tl.umap(adata, min_dist=0.3)
     adata.obsm['X_umapraw'] = adata.obsm['X_umap']
     print("Cellhint")
