@@ -18,7 +18,7 @@ bbknn_obj <- readRDS(in_rds)
 bbknn_obj <- NormalizeData(bbknn_obj, normalization.method = "LogNormalize")
 bbknn_obj <- FindVariableFeatures(bbknn_obj, selection.method = "vst", nfeatures = 2000)
 bbknn_obj <- ScaleData(bbknn_obj, verbose = F)
-bbknn_obj <- RunPCA(bbknn_obj, npcs = 30,verbose = F)
+bbknn_obj <- RunPCA(bbknn_obj, npcs = 50,verbose = F)
 
 # bbknn
 bbknn_obj <- RunBBKNN(bbknn_obj, reduction = "pca", batch_key = "batch",
