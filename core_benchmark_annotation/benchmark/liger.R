@@ -23,7 +23,7 @@ liger_obj <- ScaleData(liger_obj, split.by = "batch", do.center = FALSE)
 liger_obj <- RunOptimizeALS(liger_obj, k = 30, split.by = "batch")
 liger_obj <- RunQuantileNorm(liger_obj, split.by = "batch")
 
-liger_obj <- RunUMAP(liger_obj, dims = 1:ncol(liger_obj[["iNMF"]]), reduction = "iNMF", n_neighbors = 15L,  min_dist = 0.3)
+liger_obj <- RunUMAP(liger_obj, dims = 1:ncol(liger_obj[["iNMF"]]), reduction = "iNMF", n_neighbors = 30L,  min_dist = 0.3)
 liger_obj <- FindNeighbors(liger_obj, reduction = "iNMF")
 # liger_obj <- FindClusters(liger_obj, resolution = 1, algorithm = 4)# 4 means Leiden
 saveRDS(liger_obj,file=file.path(outdir,'liger.rds'))
