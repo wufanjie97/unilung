@@ -36,7 +36,7 @@ def run_scanorama(in_h5ad, out_h5ad, out_umap, out_scanorama, top_genes):
     )
     sc.pp.scale(adata)
     sc.tl.pca(adata)
-    sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=15, n_pcs=50)
+    sc.pp.neighbors(adata, use_rep='X_pca', n_neighbors=30, n_pcs=50)
     sc.tl.umap(adata, min_dist=0.3)
     adata.obsm['X_umapraw'] = adata.obsm['X_umap']
     print("Scanorama")
