@@ -20,7 +20,7 @@ mnn_obj <- FindVariableFeatures(mnn_obj, selection.method = "vst", nfeatures = 2
 
 ## fastMNN
 mnn_obj <- RunFastMNN(object.list = SplitObject(mnn_obj, split.by = "batch"))
-mnn_obj <- RunUMAP(mnn_obj, reduction = "mnn", dims = 1:30, n_neighbors = 15L,  min_dist = 0.3)
+mnn_obj <- RunUMAP(mnn_obj, reduction = "mnn", dims = 1:30, n_neighbors = 30L,  min_dist = 0.3)
 mnn_obj <- FindNeighbors(mnn_obj, reduction = "mnn", dims = 1:30)
 #mnn_obj <- FindClusters(mnn_obj, resolution = 1, algorithm = 4)# 4 means Leiden
 saveRDS(mnn_obj,file=file.path(outdir,'fastmnn.rds'))
