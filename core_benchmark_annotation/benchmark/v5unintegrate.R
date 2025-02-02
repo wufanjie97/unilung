@@ -29,9 +29,9 @@ seu_obj <- NormalizeData(seu_obj, normalization.method = "LogNormalize")
 seu_obj <- FindVariableFeatures(seu_obj, selection.method = "vst", nfeatures = 2000)
 seu_obj <- ScaleData(seu_obj)
 seu_obj <- RunPCA(seu_obj, npcs = 50,verbose = F)
-seu_obj <- FindNeighbors(seu_obj, reduction = "pca", dims = 1:50)
+seu_obj <- FindNeighbors(seu_obj, reduction = "pca", dims = 1:30)
 #seu_comb <- FindClusters(resolution = 1, algorithm = 4)# 4 means Leiden
-seu_obj <- RunUMAP(seu_obj, dims = 1:50, reduction = "pca", reduction.name = "umap.unintegrated")
+seu_obj <- RunUMAP(seu_obj, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
 
 seu_obj <- JoinLayers(seu_obj)
 saveRDS(seu_obj,file=file.path(outdir,'v5unintegrate.rds'))
