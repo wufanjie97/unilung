@@ -26,7 +26,7 @@ def run_simba(in_h5ad, out_h5ad, out_umap, out_simba, top_genes):
     print("Setup simba model")
     workdir = 'inte_bench/models/result_simba'
     adata_simba = ov.single.pySIMBA(adata_simba, workdir)
-    adata_simba.preprocess(batch_key='batch', min_n_cells=1, method='lib_size',
+    adata_simba.preprocess(batch_key='batch', min_n_cells=3, method='lib_size',
                            n_top_genes=top_genes, n_bins=5)
     adata_simba.gen_graph()
     adata_simba.train(num_workers=10)
