@@ -38,8 +38,8 @@ seu_obj <- IntegrateLayers(
   conda_env = "miniconda2/envs/scvi",
   verbose = FALSE
 )
-seu_obj <- FindNeighbors(seu_obj, reduction = "integrated.scvi", dims = 1:50)
-seu_obj <- RunUMAP(seu_obj, reduction = "integrated.scvi", dims = 1:50, reduction.name = "umap.scvi")
+seu_obj <- FindNeighbors(seu_obj, reduction = "integrated.scvi", dims = 1:30)
+seu_obj <- RunUMAP(seu_obj, reduction = "integrated.scvi", dims = 1:30, reduction.name = "umap.scvi")
 
 seu_obj <- JoinLayers(seu_obj)
 saveRDS(seu_obj,file=file.path(outdir,'v5scvi.rds'))
