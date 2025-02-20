@@ -17,11 +17,6 @@ count <- np$transpose(in_ad$X)
 colnames(count) <- rownames(in_ad$obs)
 rownames(count) <- rownames(in_ad$var)
 seu <- CreateSeuratObject(counts = count, meta.data = in_ad$obs)
-
-anvi <- in_ad$obsm[["X_scANVI"]]
-colnames(anvi) <- paste0("scanvi_", 1:10)
-rownames(anvi) <- colnames(seu)
-seu[["scanvi"]] <- CreateDimReducObject(embeddings = anvi, key = "scanvi_", assay = "RNA")
 saveRDS(seu,file.path(dir,"epi_raw.rds"))
 
 
@@ -211,7 +206,7 @@ cnv_score <- left_join(cnv_score,group,by="cellid")
 ggplot(cnv_score,aes(x=cluster, y=score,fill=cluster))+geom_violin(aes(fill=cluster),color="NA")+
   scale_fill_igv()+
   theme_bw()+
-  theme(panel.grid.major = element_blank(),   #不显示网格线
+  theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         axis.line = element_line(colour = "black",linewidth = .4),
         axis.ticks.x=element_line(color="black",linewidth = .4,lineend = 1),
