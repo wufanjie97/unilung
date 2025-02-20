@@ -3,163 +3,186 @@ library(Seurat)
 library(tidyverse)
 library(harmony)
 library(cowplot)
+library(ggsci)
+library(MuDataSeurat)
+library(infercnv)
+library(AnnoProbe)
+library(future)
+
+options(future.globals.maxSize = 5*1024^3)
+options(scipen = 100)
+options("Seurat.object.assay.version" = "v3")
+
 dir <- "lung_cancer_sc"
+cnv_dir <- file.path(dir, "infercnv")
 setwd(dir)
 
-use_condaenv("envs/scvi")
+use_condaenv("/envs/scvi")
 scanpy <- import("scanpy")
 pd <- import("pandas")
 np <- import("numpy")
 
 
-in_ad <- scanpy$read_h5ad(file.path(dir,"epi_raw.h5ad"))
-count <- np$transpose(in_ad$X)
-colnames(count) <- rownames(in_ad$obs)
-rownames(count) <- rownames(in_ad$var)
-seu <- CreateSeuratObject(counts = count, meta.data = in_ad$obs)
-saveRDS(seu,file.path(dir,"epi_raw.rds"))
+process_sc_data <- function() {
+  if (!file.exists(file.path(dir, "epi_raw.rds"))) {
+    in_ad <- scanpy$read_h5ad(file.path(dir, "epi_raw.h5ad"))
+    
+    count_matrix <- np$transpose(in_ad$X)
+    dimnames(count_matrix) <- list(rownames(in_ad$var), rownames(in_ad$obs))
+    
+    seu <- CreateSeuratObject(
+      counts = count_matrix,
+      meta.data = as.data.frame(in_ad$obs)
+    )
+    saveRDS(seu, file.path(dir, "epi_raw.rds"))
+  } else {
+    seu <- readRDS(file.path(dir, "epi_raw.rds"))
+  }
+  
+  processing_pipeline <- function(obj) {
+    obj %>%
+      NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000) %>%
+      FindVariableFeatures(selection.method = "vst", nfeatures = 3000) %>%
+      ScaleData() %>%
+      RunPCA(npcs = 30, verbose = FALSE) %>%
+      RunHarmony(group.by.vars = "donor_ID", max.iter.harmony = 10) %>%
+      RunUMAP(reduction = "harmony", dims = 1:30) %>%
+      FindNeighbors(reduction = "harmony", dims = 1:30) %>%
+      FindClusters(resolution = 0.1)
+  }
+  
+  sce <- processing_pipeline(seu)
+  
+  cluster_mapping <- c(
+    "0" = "Type II alveolar cell", "1" = "Basal cell",
+    "2" = "Malignant cell", "3" = "Malignant cell",
+    "4" = "Malignant cell", "5" = "Malignant cell",
+    "6" = "Ciliated cell", "7" = "Type I alveolar cell"
+  )
+  sce <- RenameIdents(sce, cluster_mapping)
+  sce$annotation <- Idents(sce)
+  
+  generate_plots(sce)
+  saveRDS(sce, file.path(dir, "epi.rds"))
+  WriteH5AD(sce, 'epi.h5ad', assay = "RNA")
+}
 
 
-
-sce <- NormalizeData(seu,normalization.method = "LogNormalize",scale.factor = 10000)
-sce <- FindVariableFeatures(sce,reductionselection.method = "vst",nfeatures = 3000)
-sce <- ScaleData(sce)
-sce <- RunPCA(object = sce,npcs = 30,pc.genes=VariableFeatures(sce),verbose = F)
-sce <- RunHarmony(sce, group.by.vars = "donor_ID", max.iter.harmony = 10)
-sce <- sce %>%
-  RunUMAP(reduction = "harmony", dims = 1:30) %>%
-  FindNeighbors(reduction = "harmony", dims = 1:30) %>%
-  FindClusters(resolution = 0.1)
-
-
-
-gse_marker <- RenameIdents(object = sce,
-                           "0" = "Type II alveolar cell", "1" = "Basal cell",
-                           "2" = "Malignant cell", "3" = "Malignant cell",
-                           "4" = "Malignant cell", "5" = "Malignant cell",
-                           "6" = "Ciliated cell", "7" = "Type I alveolar cell"
-)
-sce$annotation<-Idents(gse_marker)
-
-
-select_genes <- c(
-  "KRT13","KRT17","S100A2",#Basal cell
-  "CAV1","AGER",#Alveolar type 1
-  "SFTPC","SFTPA1","SFTPA2",#Alveolar type 2
-  "SCGB1A1","SCGB3A1",#club cell
-  "TPPP3","FOXJ1","PIFO",#ciliated cell
-  "EPCAM"# cancer
-)
-
-
-DotPlot(sce,features = select_genes,group.by = "annotation")+
-  theme(panel.grid = element_blank(), 
-        axis.text.x=element_text(angle = 45, hjust = 0.5,vjust=0.5))+
-  labs(x=NULL,y=NULL) + 
-  guides(size = guide_legend("Percent Expression") )+
-  scale_color_gradientn(colours = c('#330066','#336699','#66CC66','#FFCC33'))
-
-
-library(ggsci)
-library(cowplot)
-plot_grid(ncol=2,
-          DimPlot(sce2,reduction = "umap",cols = pal_nejm("default")(6),
-                  label = F,group.by = "annotation")+ggtitle("Cell type"),
-          DimPlot(sce2,reduction = "umap",cols = c("#B24745FF","#79AF97FF","#7B4173FF"),
-                  label = F,group.by = "sub_atlas")+ggtitle("Cancer type"))
+generate_plots <- function(sce) {
+  # DotPlot
+  marker_genes <- c(
+    "KRT13", "KRT17", "S100A2",    # Basal
+    "CAV1", "AGER",                # AT1
+    "SFTPC", "SFTPA1", "SFTPA2",   # AT2
+    "SCGB1A1", "SCGB3A1",          # Club
+    "TPPP3", "FOXJ1", "PIFO",      # Ciliated
+    "EPCAM"                        # Cancer
+  )
+  
+  dot_theme <- theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    axis.title = element_blank()
+  )
+  
+  dot_plot <- DotPlot(sce, features = marker_genes, group.by = "annotation") +
+    dot_theme +
+    guides(size = guide_legend("Percent Expression")) +
+    scale_color_gradientn(colors = c('#330066','#336699','#66CC66','#FFCC33'))
+  
+  # UMAP
+  umap_theme <- theme(plot.title = element_text(hjust = 0.5))
+  
+  p1 <- DimPlot(sce, reduction = "umap", cols = pal_nejm("default")(6),
+                group.by = "annotation") +
+    ggtitle("Cell type") +
+    umap_theme
+  
+  p2 <- DimPlot(sce, reduction = "umap", 
+                cols = c("#B24745FF","#79AF97FF","#7B4173FF"),
+                group.by = "sub_atlas") +
+    ggtitle("Cancer type") +
+    umap_theme
+  
+  plot_grid(p1, p2, ncol = 2)
+}
 
 
-saveRDS(sce,file.path(dir,"epi.rds"))
-library(MuDataSeurat)
-MuDataSeurat::WriteH5AD(sce, 'epi.h5ad', assay="RNA")
 
 
 
 
 
 ## infercnv
-library(infercnv)
-library(AnnoProbe)
-library(reticulate)
-dir <- "lung_cancer_sc"
-
-use_condaenv("/envs/scvi")
-scanpy <- import("scanpy")
-np <- import("numpy")
-
-sce <- readRDS(file.path(dir,'epi.rds'))
-ref_epi <- scanpy$read_h5ad(file.path(dir,"ref_epi10k.h5ad"))
-epi_dat <- np$transpose(ref_epi$X)
-colnames(epi_dat) <- rownames(ref_epi$obs)
-rownames(epi_dat) <- rownames(ref_epi$var)
-save(sce,epi_dat,file = file.path(dir,"infercnv/epidata.RData"))
-
-
-
-run_cnv <- function(times,cluster){
-  library(Seurat)
-  library(infercnv)
-  library(AnnoProbe)
-  library(reticulate)
-  options(future.globals.maxSize= 5*1024^3)
-  options(scipen = 100)
-  
-  load(file.path(dir,"infercnv/epidata.RData"))
-  gse <- sce[,sce@meta.data$seurat_clusters %in% cluster]
-  dat <- as.data.frame(gse@assays$RNA@counts)
-  colnames(dat) <- colnames(gse)
-  rownames(dat) <- rownames(gse)
-  
-  dat2 <- dat[intersect(rownames(dat),rownames(epi_dat)),]
-  epi_dat2 <- epi_dat[intersect(rownames(dat),rownames(epi_dat)),]
-  
-  all_dat <- cbind(dat2,epi_dat2)
-  groupinfo <- data.frame(v1=colnames(all_dat),
-                          v2=c(gse$seurat_clusters,rep('ref-epithelial',10000)))
-  
-  geneInfor <- annoGene(rownames(all_dat),"SYMBOL",'human')
-  geneInfor <- geneInfor[with(geneInfor,order(chr,start)),c(1,4:6)]
-  geneInfor <- geneInfor[!duplicated(geneInfor[,1]),]
-  
-  data <- all_dat[rownames(all_dat) %in% geneInfor[,1],]
-  data <- data[match(geneInfor[,1], rownames(data)),] 
-  
-  print("=============== Start save files ===============")
-  expfile <- file.path(paste0(dir,'/infercnv'),paste0('expfile',times,'.txt'))
-  write.table(data,file = expfile,sep = '\t',quote = F)
-  groupfile <- file.path(paste0(dir,'/infercnv'),paste0('groupfile',times,'.txt'))
-  write.table(groupinfo,file = groupfile,sep = '\t',quote = F,col.names = F,row.names = F)
-  genefile <- file.path(paste0(dir,'/infercnv'),paste0('genefile',times,'.txt'))
-  write.table(geneInfor,file = genefile,sep = '\t',quote = F,col.names = F,row.names = F)
-  print("=============== Done save files ===============")
-
-  
-  options(scipen = 100)
-  options("Seurat.object.assay.version" = "v3")
-  
-  expfile <- file.path(paste0(dir,'/infercnv'),paste0('expfile',times,'.txt'))
-  groupfile <- file.path(paste0(dir,'/infercnv'),paste0('groupfile',times,'.txt'))
-  genefile <- file.path(paste0(dir,'/infercnv'),paste0('genefile',times,'.txt'))
-
-  infercnv_obj = CreateInfercnvObject(raw_counts_matrix=expfile,
-                                      annotations_file=groupfile,
-                                      delim="\t",
-                                      gene_order_file= genefile,
-                                      ref_group_names='ref-epithelial') 
-  print("=============== Done create cnvdata ===============")
-  future::plan("multicore",workers=16)
-  infercnv_obj2 = infercnv::run(infercnv_obj,
-                                cutoff=0.1, 
-                                out_dir=paste0(dir,"/infercnv/cnv",times),
-                                cluster_by_groups=T,
-                                write_expr_matrix=T,
-                                write_phylo = T, 
-                                denoise = T,
-                                HMM = F,
-                                output_format = "pdf")
-  save(infercnv_obj,infercnv_obj2,file = paste0(dir,"/infercnv/infercnv_obj",times,".RData"))
+prepare_cnv_data <- function() {
+  if (!file.exists(file.path(cnv_dir, "epidata.RData"))) {
+    ref_epi <- scanpy$read_h5ad(file.path(dir, "ref_epi10k.h5ad"))
+    epi_dat <- np$transpose(ref_epi$X)
+    dimnames(epi_dat) <- list(rownames(ref_epi$var), rownames(ref_epi$obs))
+    save(sce, epi_dat, file = file.path(cnv_dir, "epidata.RData"))
+  }
 }
 
+run_cnv <- function(times, clusters) {
+  if (missing(times) | missing(clusters)) {
+    stop("Both times and clusters parameters are required")
+  }
+  
+  load(file.path(cnv_dir, "epidata.RData"))
+  gse <- sce[, sce$seurat_clusters %in% clusters]
+  
+  common_genes <- intersect(rownames(gse), rownames(epi_dat))
+  combined_data <- cbind(
+    GetAssayData(gse, "counts")[common_genes, ],
+    epi_dat[common_genes, ]
+  )
+  
+  annotations <- data.frame(
+    cell_id = colnames(combined_data),
+    group = c(gse$seurat_clusters, rep('ref-epithelial', ncol(epi_dat)))
+  )
+
+  gene_info <- annoGene(common_genes, "SYMBOL", 'human') %>%
+    arrange(chr, start) %>%
+    distinct(symbol, .keep_all = TRUE)
+  
+  output_prefix <- file.path(cnv_dir, paste0("cnv", times))
+  dir.create(output_prefix, showWarnings = FALSE, recursive = TRUE)
+  
+  write.table(combined_data, file.path(output_prefix, "exp_matrix.tsv"), 
+              sep = "\t", quote = FALSE)
+  write.table(annotations, file.path(output_prefix, "annotations.tsv"),
+              sep = "\t", quote = FALSE, col.names = FALSE)
+  write.table(gene_info, file.path(output_prefix, "gene_positions.tsv"),
+              sep = "\t", quote = FALSE, col.names = FALSE)
+  
+
+  infercnv_obj <- CreateInfercnvObject(
+    raw_counts_matrix = file.path(output_prefix, "exp_matrix.tsv"),
+    annotations_file = file.path(output_prefix, "annotations.tsv"),
+    gene_order_file = file.path(output_prefix, "gene_positions.tsv"),
+    delim = "\t",
+    ref_group_names = 'ref-epithelial'
+  )
+  
+  plan("multicore", workers = 8)
+  infercnv_results <- run(
+    infercnv_obj,
+    cutoff = 0.1,
+    out_dir = output_prefix,
+    cluster_by_groups = TRUE,
+    denoise = TRUE,
+    HMM = FALSE,
+    output_format = "pdf"
+  )
+  
+  saveRDS(infercnv_results, file.path(output_prefix, "results.rds"))
+}
+
+
+
+process_sc_data()
+prepare_cnv_data()
 ## Due to the scale of data, We split it into three subsets according to the clustering results and run them separately
 run_cnv(times = 1, cluster = c(0,16:34))
 run_cnv(times = 2, cluster = c(1:3,13:15))
@@ -169,14 +192,73 @@ run_cnv(times = 3, cluster = c(4:12))
 
 
 
-
+## CNV score
 library(infercnv)
 library(Seurat)
 library(ggplot2)
 library(data.table)
 library(tidyverse)
+library(ggsci)
+library(CytoTRACE)
+library(Matrix)
+
+
 dir <- "lung_cancer_sc"
-setwd("lung_cancer_sc/infercnv")
+cnv_dir <- file.path(dir, "infercnv")
+output_dir <- file.path(dir, "results")
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+
+future::plan("multicore", workers = 8)
+options(future.globals.maxSize = 10 * 1024^3)
+
+
+process_cnv_analysis <- function() {
+  cnv_data_path <- file.path(cnv_dir, "cnv_all/run.final.infercnv_obj")
+  group_file <- file.path(cnv_dir, "groupfile.txt")
+  
+  if (!file.exists(cnv_data_path)) stop("CNV data file not found")
+  if (!file.exists(group_file)) stop("Group file not found")
+  
+  cnv_data <- readRDS(cnv_data_path)
+  dat <- cnv_data@expr.data
+  
+  cnv_score <- function(mat) {
+    scaled_mat <- t(scale(Matrix::t(mat)))
+    scaled_mat <- scales::rescale(scaled_mat, to = c(-1, 1))
+    data.frame(
+      cellid = colnames(mat),
+      score = colSums(scaled_mat^2, na.rm = TRUE),
+      row.names = NULL
+    )
+  }
+  
+  scores <- cnv_score(dat)
+  
+  groups <- fread(group_file, header = FALSE, col.names = c("cellid", "cluster"))
+
+  combined_data <- scores %>%
+    left_join(groups, by = "cellid") %>%
+    filter(!is.na(cluster)) 
+  
+  generate_cnv_plot <- function(data) {
+    ggplot(data, aes(x = cluster, y = score, fill = cluster)) +
+      geom_violin(alpha = 0.8, show.legend = FALSE) +
+      scale_fill_igv() +
+      theme_minimal(base_size = 10) +
+      theme(
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(linewidth = 0.5),
+        plot.margin = margin(1, 1, 1, 1, "cm")
+      ) +
+      labs(x = "Cell Type", y = "CNV Score")
+  }
+  
+  cnv_plot <- generate_cnv_plot(combined_data)
+  ggsave(file.path(output_dir, "cnv_score.pdf"), cnv_plot,
+         width = 15, height = 10, units = "cm", dpi = 300)
+}
 
 
 cnvScore <- function(data){
@@ -190,58 +272,73 @@ cnvScore <- function(data){
   return(cnv_score)
 }
 
-# dat <- read.table("infercnv.observations.txt", header=T)
-dat <- readRDS("cnv_all/run.final.infercnv_obj")
-cnv_score <- cnvScore(dat@expr.data)
-
-colnames(cnv_score) <- "score"
-cnv_score <- rownames_to_column(cnv_score, var='cellid')
-
-group <- read.table("groupfile.txt")
-colnames(group) <- c("cellid","cluster")
-
-cnv_score <- left_join(cnv_score,group,by="cellid")
 
 
-ggplot(cnv_score,aes(x=cluster, y=score,fill=cluster))+geom_violin(aes(fill=cluster),color="NA")+
-  scale_fill_igv()+
-  theme_bw()+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.line = element_line(colour = "black",linewidth = .4),
-        axis.ticks.x=element_line(color="black",linewidth = .4,lineend = 1),
-        axis.ticks.y=element_line(color="black",linewidth = .4,lineend = 1),
-        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 5),
-        axis.text.y = element_text(size = 5),
-        axis.title = element_text(size = 9))+
-  ylab("cnv score")+xlab("celltype")
-ggsave("cnv_score.pdf",width = 15,height = 6,units = "cm")
+# CytoTRACE
+run_cytotrace_analysis <- function() {
+  sce_path <- file.path(dir, "epi.rds")
+  if (!file.exists(sce_path)) stop("Seurat object not found")
+  sce <- readRDS(sce_path)
+  
+  sce <- FindVariableFeatures(
+    sce,
+    selection.method = "vst",
+    nfeatures = 2000,
+    verbose = FALSE
+  )
+  
+  sketch_data <- function(obj) {
+    SketchData(
+      object = obj,
+      ncells = min(1e5, ncol(obj)), 
+      method = "LeverageScore",
+      sketched.assay = "bpcell"
+    )
+  }
+  
+  sce_sketch <- sketch_data(sce)
+  
+  process_expression <- function(obj) {
+    counts <- GetAssayData(obj, "counts", "RNA")
+    Matrix::Matrix(counts, sparse = TRUE)
+  }
+  
+  mat <- process_expression(sce_sketch)
+  
+  run_cytotrace <- function(expr_mat) {
+    CytoTRACE(
+      mat = expr_mat,
+      ncores = 8,
+      subsample = FALSE
+    )
+  }
+  
+  cytotrace_res <- run_cytotrace(mat)
+  
+  generate_cytotrace_plots <- function(res, metadata, reduction = "umap") {
+    emb <- Embeddings(metadata, reduction)
+    
+    plot_features <- list(
+      list(var = "annotation", prefix = "anno"),
+      list(var = "sub_atlas", prefix = "atlas")
+    )
+    
+    purrr::walk(plot_features, function(feat) {
+      phenotype <- setNames(as.character(metadata[[feat$var]]), colnames(metadata))
+      plotCytoTRACE(
+        res,
+        phenotype = phenotype,
+        emb = emb,
+        outputDir = file.path(output_dir, "cytotrace"),
+        prefix = feat$prefix
+      )
+    })
+  }
+  
+  generate_cytotrace_plots(cytotrace_res, sce_sketch)
+}
 
 
 
-
-library(CytoTRACE)
-dir <- "lung_cancer_sc"
-setwd(dir)
-
-
-sce <- readRDS(file.path(dir,'epi.rds'))
-sce <- FindVariableFeatures(sce,reductionselection.method = "vst",nfeatures = 2000)
-sce2 <- SketchData(object = sce,ncells = 100000,method = "LeverageScore",sketched.assay = "bpcell")
-sce2 <- sce2@assays$bpcell@counts
-sce_sub <- subset(sce,cells=colnames(sce2))
-
-mat <- as.matrix(sce_sub@assays$RNA@counts)
-results <- CytoTRACE(mat, ncores = 8)
-
-emb <- sce_sub@reductions[["umap"]]@cell.embeddings
-
-celltype <- as.character(sce_sub$annotation)
-names(celltype) <- rownames(sce_sub@meta.data)
-plotCytoTRACE(results, phenotype = celltype,emb = emb,outputDir = paste0(dir,"/harm_cytotrace/anno_"))
-
-atlas <- as.character(sce_sub$sub_atlas)
-names(atlas) <- rownames(sce_sub@meta.data)
-plotCytoTRACE(results, phenotype = atlas, emb = emb, outputDir = paste0(dir,"/harm_cytotrace/atlas_"))
-
-
+process_cnv_analysis()
+run_cytotrace_analysis()
