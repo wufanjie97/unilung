@@ -1,7 +1,7 @@
 # uniLUNG Reproducibility
 This repository contains codes to reproduce the results published in the paper:
 
-"A universal single-cell transcriptomics atlas of human lung decodes multiple pulmonary diseases"
+"A unified single-cell atlas of human lung provides insights into pulmonary diseases", EBioMedicine, 2025.
 
 The web portal of uniLUNG together with all the datasets are publicly available at https://lung.unifiedcellatlas.org.
 
